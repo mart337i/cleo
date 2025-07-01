@@ -1,0 +1,13 @@
+# -*- coding: utf-8 -*-
+{% if controllers %}
+from . import controllers
+{% endif %}
+{% if models %}
+from . import models
+{% endif %}
+{% if reports %}
+from . import report
+{% endif %}
+{% if wizards %}
+from . import wizard
+{% endif %}

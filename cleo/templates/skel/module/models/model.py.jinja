@@ -1,0 +1,12 @@
+from odoo import models, fields, api, _
+
+class {{ name | pascal }}({{'models.TransientModel' if transient else 'models.Model'}}):
+    {% if not parent %}
+    _name = '{{ name }}'
+    {% elif parent %}
+    _inherit = '{{parent}}'
+    {% endif %}
+    {% if implements %}
+    _inherits = [{{ "','".join(implements) }}]
+    {% endif %}
+    

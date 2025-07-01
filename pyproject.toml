@@ -1,0 +1,30 @@
+[project]
+name = "cleo"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Martin egeskov",email = "*@email.com"}
+]
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "rich>=13.0.0",
+    "typer>=0.9.0",
+    "python-dotenv>=1.0.0",
+    "jinja2>=3.1.0",
+    "cryptography>=41.0.0",
+    "fastapi>=0.100.0",
+    "invoke>=2.2.0",
+    "lxml (>=6.0.0,<7.0.0)"
+]
+
+[project.scripts]
+cleo = "cleo.cli.command:main"
+
+[tool.poetry]
+packages = [{ include = "cleo" }]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

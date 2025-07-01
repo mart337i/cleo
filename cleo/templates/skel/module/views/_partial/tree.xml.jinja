@@ -1,0 +1,10 @@
+<record id="{{ model | replace('.', '_') | snake }}_view_tree" model="ir.ui.view">
+            <field name="name">{{ model }}.tree.view</field>
+            <field name="model">{{ model }}</field>
+            <field name="type">tree</field>
+            <field name="arch" type="xml">
+                <tree string="{{ model | replace('.', '_') | snake | inverse_snake }}">
+                    
+                </tree>
+            </field>
+        </record>

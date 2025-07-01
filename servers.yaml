@@ -1,0 +1,9 @@
+
+servers:
+  node1: 
+    - ip: 5.135.170.105
+    - users: ['sysadmin','deploy']
+
+  node2: 
+    - ip: 5.135.170.105
+    - users: ['sysadmin','tourly']

@@ -1,0 +1,2 @@
+class SleepyDeveloperError(ValueError):
+    pass

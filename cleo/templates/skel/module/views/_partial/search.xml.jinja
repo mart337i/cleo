@@ -1,0 +1,9 @@
+<record id="{{ model | replace('.', '_') | snake }}_view_search" model="ir.ui.view">
+            <field name="name">{{ model }}.search.view</field>
+            <field name="model">{{ model }}</field>
+            <field name="arch" type="xml">
+                <search string="Search {{ model | replace('.', '_') | snake | inverse_snake }}">
+                    
+                </search>
+            </field>
+        </record>

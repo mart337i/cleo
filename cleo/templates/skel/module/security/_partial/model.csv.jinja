@@ -1,0 +1,1 @@
+access_{{ model | replace('.', '_') | snake }},{{ model }}.access,{{ name + '.' if name else '' }}{{ model | replace('.', '_') | snake }},{{group or 'base.group_user'}},{{read}},{{write}},{{create}},{{unlink}}

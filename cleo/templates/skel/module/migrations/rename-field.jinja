@@ -1,0 +1,114 @@
+import logging
+from psycopg2 import IntegrityError, ProgrammingError
+from datetime import datetime
+
+logger = logging.getLogger(__name__)
+
+def logged_query(cr, query, args=None, skip_no_result=False):
+    if args is None:
+        args = ()
+    args = tuple(args) if isinstance(args, list) else args
+    log_level = logging.DEBUG
+    log_msg = False
+    start = datetime.now()
+    
+    try:
+        cr.execute(query, args)
+    except (ProgrammingError, IntegrityError):
+        log_level = logging.ERROR
+        log_msg = "Error after %(duration)s running %(full_query)s"
+        raise
+    else:
+        if not skip_no_result or cr.rowcount:
+            log_msg = "%(rowcount)d rows affected after %(duration)s running %(full_query)s"
+    finally:
+        duration = datetime.now() - start
+        if log_msg:
+            try:
+                full_query = cr.mogrify(query, args).decode("utf-8")
+            except AttributeError:
+                full_query = str(cr.query)
+            logger.log(log_level, log_msg, {
+                "full_query": full_query,
+                "rowcount": cr.rowcount,
+                "duration": duration,
+            })
+    return cr.rowcount
+
+def column_exists(cr, table, column):
+    cr.execute(
+        'SELECT count(attname) FROM pg_attribute '
+        'WHERE attrelid = '
+        '( SELECT oid FROM pg_class WHERE relname = %s ) '
+        'AND attname = %s',
+        (table, column))
+    return cr.fetchone()[0] == 1
+
+def rename_columns(cr, column_spec):
+    for table in column_spec.keys():
+        for (old, new) in column_spec[table]:
+            logger.info("table %s, column %s: renaming to %s",
+                        table, old, new)
+            cr.execute(
+                'ALTER TABLE "%s" RENAME "%s" TO "%s"' % (table, old, new,))
+            old_index_name = "%s_%s_index" % (table, old)
+            new_index_name = "%s_%s_index" % (table, new)
+            if len(new_index_name) <= 63:
+                cr.execute(
+                    'ALTER INDEX IF EXISTS "%s" RENAME TO "%s"' %
+                    (old_index_name, new_index_name)
+                )
+
+def rename_fields(cr, field_spec, no_deep=False):
+    for model, table, old_field, new_field in field_spec:
+        if column_exists(cr, table, old_field):
+            rename_columns(cr, {table: [(old_field, new_field)]})
+        cr.execute("""
+                UPDATE ir_model_fields
+                SET name = %s
+                WHERE name = %s
+                    AND model = %s
+                """, (new_field, old_field, model),
+                   )
+        if column_exists(cr, "ir_attachment", "res_field"):
+            cr.execute("""
+                    UPDATE ir_attachment
+                    SET res_field = %s
+                    WHERE res_model = %s
+                        AND res_field = %s
+                    """, (new_field, model, old_field)
+                       )
+                       
+def migrate(cr, version):
+    """
+    How to use this migration function:
+    
+    1. Define field specifications as a list of tuples:
+       Each tuple should contain: (model_name, table_name, old_field_name, new_field_name)
+       
+       Example:
+       fields = [
+           ('res.partner', 'res_partner', 'old_phone', 'phone_number'),
+           ('sale.order', 'sale_order', 'old_total', 'amount_total'),
+           ('product.product', 'product_product', 'old_description', 'description_sale'),
+       ]
+    
+    2. Call rename_fields with the field specifications:
+       rename_fields(cr, fields)
+    
+    This will:
+    - Rename the database columns in the specified tables
+    - Update the field definitions in ir_model_fields
+    - Update any attachments that reference the old field names
+    - Rename any associated database indexes
+    
+    Note: The migration will only rename columns that actually exist in the database.
+    """
+    fields = [
+        # Add your field renames here as tuples: (model, table, old_field, new_field)
+        # Example:
+        # ('res.partner', 'res_partner', 'old_phone', 'phone_number'),
+    ]
+    
+    if fields:
+        rename_fields(cr, fields)

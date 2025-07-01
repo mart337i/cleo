@@ -1,0 +1,15 @@
+<record id="{{ model | replace('.', '_') | snake }}_view_form" model="ir.ui.view">
+            <field name="name">{{ model }}.form.view</field>
+            <field name="model">{{ model }}</field>
+            <field name="type">form</field>
+            <field name="arch" type="xml">
+                <form string="{{ model | replace('.', '_') | snake | inverse_snake }}">
+                    <header>
+                        
+                    </header>
+                    <sheet>
+                        
+                    </sheet>
+                </form>
+            </field>
+        </record>

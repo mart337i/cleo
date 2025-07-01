@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data>
+        {% if form %}{% include 'skel/module/views/_partial/form.xml.jinja' %}{% endif %}
+        {% if list %}{% include 'skel/module/views/_partial/tree.xml.jinja' %}{% endif %}
+        {% if search %}{% include 'skel/module/views/_partial/search.xml.jinja' %}{% endif %}
+    </data>
+</odoo>
