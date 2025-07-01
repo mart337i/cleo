@@ -23,8 +23,6 @@ def deploy(
     database: Annotated[str, typer.Option()] = "",
     remote: Annotated[str, typer.Option()] = "~/src/custom",
     modules: Annotated[str, typer.Argument(help="Module path(s) or 'all' to deploy all modules in current directory")] = None,
-    rpc_username: Annotated[str, typer.Option(show_default=False)] = os.getenv('ODOO_USER', ''),
-    rpc_password: Annotated[str, typer.Option(show_default=False)] = os.getenv('ODOO_PASSWORD', ''),
     verbose: Annotated[bool, typer.Option()] = False,
     force: Annotated[bool, typer.Option(hidden=True)] = False,
 ) -> None:
@@ -89,7 +87,7 @@ def deploy(
     )
 
     # Restart instance
-    service_restart(username=user, domain_name=server, service=f"{user}-odoo")
+    service_restart(username=user, domain_name=server, service=f"{database}.service")
 
     # Install/update all modules
     module_names = [os.path.basename(path) for path in module_paths]
