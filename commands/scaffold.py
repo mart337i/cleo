@@ -100,7 +100,7 @@ def module(
         "version": f"{odoo_version}.1.0.0",
         "license": "OPL-1",
         "depends": depends,
-        "author": "VK DATA ApS",
+        "author": "egeskov-group.dk",
         "summary": """""",
         "category": "Uncategorized",
         "description": """""",
