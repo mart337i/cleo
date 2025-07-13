@@ -31,8 +31,7 @@
 
     'installable': {{ manifest.get('installable', False) }},
     'auto_install': {{ manifest.get('auto_install', False) }},
-    'application': {{ manifest.get('application', False) }},
-
-    {%- if 'price' in manifest -%}'price': "{{ manifest.get('price', '') }}",{%- endif -%}
-    {%- if 'currency' in manifest -%}'currency': "{{ manifest.get('currency', '') }}",{%- endif %}
+    'application': {{ manifest.get('application', False) }}{% if 'price' in manifest %},
+    'price': "{{ manifest.get('price', '') }}"{% endif %}{% if 'currency' in manifest %},
+    'currency': "{{ manifest.get('currency', '') }}"{% endif %}
 }

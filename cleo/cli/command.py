@@ -29,20 +29,6 @@ def discover_commands(commands_dir: Path):
         relative_path = item.relative_to(commands_dir)
         parts = relative_path.parts
         
-        if len(parts) == 1:
-            # Direct file in commands directory (e.g., repo.py)
-            parent_module = item.stem
-        else:
-            # File in subdirectory (e.g., instance/dev.py)
-            parent_module = parts[0]
-        
-        # Create a new Typer app for this module if it doesn't exist
-        if parent_module not in module_apps:
-            module_apps[parent_module] = typer.Typer(
-                name=parent_module, 
-                help=f"Commands for {parent_module}"
-            )
-        
         try:
             # Build import path
             import_path = _build_import_path_new(commands_dir, item)
@@ -53,7 +39,23 @@ def discover_commands(commands_dir: Path):
             
             # Register the Typer app if available
             if hasattr(module, 'app') and isinstance(module.app, typer.Typer):
-                _register_typer_app(module, module_name, parent_module, module_apps, import_path)
+                if len(parts) == 1:
+                    # Direct file in commands directory - add directly to main CLI
+                    cli.add_typer(module.app, name=module_name)
+                    if configuration.debug:
+                        rich.print(f"[green]Registered top-level command: {module_name} from {import_path}[/green]")
+                else:
+                    # File in subdirectory - group under parent module
+                    parent_module = parts[0]
+                    
+                    # Create a new Typer app for this module if it doesn't exist
+                    if parent_module not in module_apps:
+                        module_apps[parent_module] = typer.Typer(
+                            name=parent_module, 
+                            help=f"Commands for {parent_module}"
+                        )
+                    
+                    _register_typer_app(module, module_name, parent_module, module_apps, import_path)
             elif configuration.debug:
                 rich.print(f"[yellow]Module {import_path} does not contain a typer app[/yellow]")
                 
@@ -132,5 +134,6 @@ def get_config():
 
 def main():
     """Main entry point for the CLI"""
-    discover_commands(addons)
+    commands_dir = Path(__file__).parent.parent.parent / "commands"
+    discover_commands(commands_dir)
     cli()
