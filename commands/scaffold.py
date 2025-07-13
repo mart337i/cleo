@@ -1,12 +1,18 @@
-import os
 from pathlib import Path
-from typing import Annotated, Optional
-from enum import Enum
+from typing import Annotated
 import rich
 import typer
 from lxml import etree
 
 from cleo.utils.jinja import render
+
+
+def _write_template_file(file_path: Path, template_name: str, context: dict = None):
+    """Helper function to write a template file"""
+    if context is None:
+        context = {}
+    with file_path.open("w") as f:
+        f.write(render(template_name=template_name, context=context))
 
 
 app = typer.Typer(
@@ -111,74 +117,63 @@ def module(
         "application": app,
     }
 
-    with Path(root, "__manifest__.py").open("w") as f:
-        f.write(
-            render(
-                template_name="skel/module/__manifest__.py.jinja",
-                context={"manifest": manifest},
-            )
-        )
-    with Path(root, "__init__.py").open("w") as f:
-        f.write(
-            render(
-                template_name="skel/module/__init__.py.jinja",
-                context={
-                    "controllers": controllers,
-                    "data": data,
-                    "models": models,
-                    "static": static,
-                    "reports": reports,
-                    "views": views,
-                    "wizards": wizards,
-                },
-            )
-        )
+    _write_template_file(
+        Path(root, "__manifest__.py"),
+        "skel/module/__manifest__.py.jinja",
+        {"manifest": manifest}
+    )
+    _write_template_file(
+        Path(root, "__init__.py"),
+        "skel/module/__init__.py.jinja",
+        {
+            "controllers": controllers,
+            "data": data,
+            "models": models,
+            "static": static,
+            "reports": reports,
+            "views": views,
+            "wizards": wizards,
+        }
+    )
     if controllers:
-        Path(root, "controllers").mkdir()
-        with Path(root, "controllers", "__init__.py").open("w") as f:
-            f.write(
-                render(
-                    template_name="skel/module/controllers/__init__.py.jinja",
-                    context={"name": name},
-                )
-            )
-        with Path(root, "controllers", f"{name}.py").open("w") as f:
-            f.write(
-                render(
-                    template_name="skel/module/controllers/module.py.jinja",
-                    context={"name": name},
-                )
-            )
+        controllers_dir = Path(root, "controllers")
+        controllers_dir.mkdir()
+        _write_template_file(
+            controllers_dir / "__init__.py",
+            "skel/module/controllers/__init__.py.jinja",
+            {"name": name}
+        )
+        _write_template_file(
+            controllers_dir / f"{name}.py",
+            "skel/module/controllers/module.py.jinja",
+            {"name": name}
+        )
     if data:
         Path(root, "data").mkdir()
 
     if models:
-        Path(root, "models").mkdir()
-        with Path(root, "models", "__init__.py").open("w") as f:
-            f.write(
-                render(
-                    template_name="skel/module/models/__init__.py.jinja", context={}
-                )
-            )
+        models_dir = Path(root, "models")
+        models_dir.mkdir()
+        _write_template_file(
+            models_dir / "__init__.py",
+            "skel/module/models/__init__.py.jinja"
+        )
     if reports:
-        Path(root, "report").mkdir()
-        with Path(root, "report", "__init__.py").open("w") as f:
-            f.write(
-                render(
-                    template_name="skel/module/report/__init__.py.jinja", context={}
-                )
-            )
+        reports_dir = Path(root, "report")
+        reports_dir.mkdir()
+        _write_template_file(
+            reports_dir / "__init__.py",
+            "skel/module/report/__init__.py.jinja"
+        )
 
     if any([models, reports, wizards]):
         manifest["data"].append("security/ir.model.access.csv")
-        Path(root, "security").mkdir()
-        with Path(root, "security", "ir.model.access.csv").open("w") as f:
-            f.write(
-                render(
-                    template_name="skel/module/security/ir.model.access.csv.jinja",
-                    context={},
-                )
-            )
+        security_dir = Path(root, "security")
+        security_dir.mkdir()
+        _write_template_file(
+            security_dir / "ir.model.access.csv",
+            "skel/module/security/ir.model.access.csv.jinja"
+        )
 
     if static:
         Path(root, "static").mkdir()
@@ -189,13 +184,12 @@ def module(
         Path(root, "views").mkdir()
 
     if wizards:
-        Path(root, "wizard").mkdir()
-        with Path(root, "wizard", "__init__.py").open("w") as f:
-            f.write(
-                render(
-                    template_name="skel/module/wizard/__init__.py.jinja", context={}
-                )
-            )
+        wizard_dir = Path(root, "wizard")
+        wizard_dir.mkdir()
+        _write_template_file(
+            wizard_dir / "__init__.py",
+            "skel/module/wizard/__init__.py.jinja"
+        )
 
     rich.print(
         f"[bold green]The module, {name}, has been scaffolded. Happy developing :)[/bold green]"
@@ -223,14 +217,13 @@ def controller(
     """
     if not name:
         name = module
-    Path(module, "controllers").mkdir(exist_ok=True)
-    with Path(module, "controllers", f"{name}.py").open("w") as f:
-        f.write(
-            render(
-                template_name="skel/module/controllers/module.py.jinja",
-                context={"name": name},
-            )
-        )
+    controllers_dir = Path(module, "controllers")
+    controllers_dir.mkdir(exist_ok=True)
+    _write_template_file(
+        controllers_dir / f"{name}.py",
+        "skel/module/controllers/module.py.jinja",
+        {"name": name}
+    )
     with Path(module, "controllers", "__init__.py").open("a") as f:
         f.write(f"from . import {name}")
 
@@ -255,16 +248,13 @@ def data(
 
     The process creates an empty record element in XML with basic assumed fields inside
     """
-    Path(module, "data").mkdir(exist_ok=True)
-    with Path(
-        module, "data", f'{model.replace(".", "_")}_data.xml'
-    ).open("w") as f:
-        f.write(
-            render(
-                template_name="skel/module/data/model_data.xml.jinja",
-                context={"model": model},
-            )
-        )
+    data_dir = Path(module, "data")
+    data_dir.mkdir(exist_ok=True)
+    _write_template_file(
+        data_dir / f'{model.replace(".", "_")}_data.xml',
+        "skel/module/data/model_data.xml.jinja",
+        {"model": model}
+    )
 
     rich.print(
         f"[bold green]The data file for model, {model}, has been scaffolded in module {module}. Happy developing :)[/bold green]"
@@ -312,19 +302,18 @@ def model(
     if implements:
         implements: list[str] = implements.split(",")
 
-    Path(module, "models").mkdir(exist_ok=True)
-    with Path(module, "models", f"{name}.py").open("w") as f:
-        f.write(
-            render(
-                template_name="skel/module/models/model.py.jinja",
-                context={
-                    "name": name,
-                    "parent": parent or False,
-                    "implements": implements or [],
-                    "transient": transient,
-                },
-            )
-        )
+    models_dir = Path(module, "models")
+    models_dir.mkdir(exist_ok=True)
+    _write_template_file(
+        models_dir / f"{name}.py",
+        "skel/module/models/model.py.jinja",
+        {
+            "name": name,
+            "parent": parent or False,
+            "implements": implements or [],
+            "transient": transient,
+        }
+    )
     with Path(module, "models", "__init__.py").open("a") as f:
         f.write(f'\nfrom . import {name.replace(".", "_")}')
 

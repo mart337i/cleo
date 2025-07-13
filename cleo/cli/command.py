@@ -8,7 +8,6 @@ import typer
 
 # Local imports
 from cleo.config import configuration
-from cleo import addons
 
 cli = typer.Typer(help="cleo CLI application")
 
@@ -25,39 +24,35 @@ def discover_commands(commands_dir: Path):
         if item.name == '__init__.py':
             continue
             
-        # Determine the module structure
         relative_path = item.relative_to(commands_dir)
         parts = relative_path.parts
         
         try:
-            # Build import path
-            import_path = _build_import_path_new(commands_dir, item)
+            import_path = _build_import_path(commands_dir, item)
             module_name = item.stem
-            
-            # Import the module
             module = import_module(import_path)
             
-            # Register the Typer app if available
-            if hasattr(module, 'app') and isinstance(module.app, typer.Typer):
-                if len(parts) == 1:
-                    # Direct file in commands directory - add directly to main CLI
-                    cli.add_typer(module.app, name=module_name)
-                    if configuration.debug:
-                        rich.print(f"[green]Registered top-level command: {module_name} from {import_path}[/green]")
-                else:
-                    # File in subdirectory - group under parent module
-                    parent_module = parts[0]
-                    
-                    # Create a new Typer app for this module if it doesn't exist
-                    if parent_module not in module_apps:
-                        module_apps[parent_module] = typer.Typer(
-                            name=parent_module, 
-                            help=f"Commands for {parent_module}"
-                        )
-                    
-                    _register_typer_app(module, module_name, parent_module, module_apps, import_path)
-            elif configuration.debug:
-                rich.print(f"[yellow]Module {import_path} does not contain a typer app[/yellow]")
+            if not (hasattr(module, 'app') and isinstance(module.app, typer.Typer)):
+                if configuration.debug:
+                    rich.print(f"[yellow]Module {import_path} does not contain a typer app[/yellow]")
+                continue
+            
+            if len(parts) == 1:
+                # Direct file in commands directory - add directly to main CLI
+                cli.add_typer(module.app, name=module_name)
+                if configuration.debug:
+                    rich.print(f"[green]Registered top-level command: {module_name}[/green]")
+            else:
+                # File in subdirectory - group under parent module
+                parent_module = parts[0]
+                
+                if parent_module not in module_apps:
+                    module_apps[parent_module] = typer.Typer(
+                        name=parent_module, 
+                        help=f"Commands for {parent_module}"
+                    )
+                
+                _register_typer_app(module, module_name, parent_module, module_apps)
                 
         except ImportError as e:
             _log_error(f"Failed to import module {import_path}", e)
@@ -65,46 +60,28 @@ def discover_commands(commands_dir: Path):
             _log_error(f"Error processing {item}", e)
     
     # Add all module apps to the main CLI
-    for module_name, module_app in module_apps.items():
+    for module_app in module_apps.values():
         cli.add_typer(module_app)
 
 
-def _build_import_path(cli_dir: Path, item: Path) -> str:
-    """Build the correct import path for a module."""
-    parts = list(cli_dir.parts)
-    module_name = item.name.replace('.py', '')
-    
-    if "addons" in parts:
-        addons_index = parts.index("addons")
-        module_parts = parts[addons_index:]
-        return ".".join(module_parts + [module_name])
-    else:
-        return f"cli.{module_name}"
-
-
-def _build_import_path_new(commands_dir: Path, item: Path) -> str:
+def _build_import_path(commands_dir: Path, item: Path) -> str:
     """Build the correct import path for a module in the commands directory."""
     relative_path = item.relative_to(commands_dir)
     parts = list(relative_path.parts)
-    
-    # Remove the .py extension from the last part
     parts[-1] = parts[-1].replace('.py', '')
-    
-    # Build the import path
     return "commands." + ".".join(parts)
 
 
-def _register_typer_app(module, module_name, parent_module, module_apps, import_path):
+def _register_typer_app(module, module_name, parent_module, module_apps):
     """Register a Typer app with its parent module."""
     cmd_name = getattr(module, 'name', module_name)
     module_apps[parent_module].add_typer(module.app, name=cmd_name)
     
-    # Add doc string as help if available
     if hasattr(module, '__doc__') and module.__doc__:
         module.app.info.help = module.__doc__.strip()
     
     if configuration.debug:
-        rich.print(f"[green]Registered command: {parent_module} {cmd_name} from {import_path}[/green]")
+        rich.print(f"[green]Registered command: {parent_module} {cmd_name}[/green]")
 
 
 def _log_error(message: str, error: Exception):
